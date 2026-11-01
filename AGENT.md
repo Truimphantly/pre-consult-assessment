@@ -132,16 +132,16 @@ python -m app.cli rule-check
 
 每条规则都**可被 `python -m app.cli rule-check` 自动检查**，不靠人盯。
 
-| 编号 | 规则 | 检查方式 |
-| --- | --- | --- |
-| R1 | 计分相关函数必须返回 `ScoreResult`，不得返回 `None`、裸数字或 `dict` | 扫描 `app/engine.py`、`app/report.py` 中的 `return None` |
-| R2 | 业务错误统一抛 `app.errors.ScoreError`（输入类用 `InputError`），禁止 `ValueError`/`KeyError`/`assert` 做业务校验，禁止 `except Exception: pass` | 扫描项目源码中的 `raise ValueError`、`raise KeyError`、`except Exception:` |
-| R3 | 所有面向人的文本（CLI 输出、异常 message、报告）必须是简体中文；英文只允许出现在代码标识符与命令名中 | 扫描 `print(...)`、`ScoreError(...)`、`InputError(...)` 中的纯英文字面量 |
-| R4 | 量表条目、分值与分级阈值只能写在 `app/scales.py`；`engine.py`、`report.py` 不得出现两位以上的数字常量 | 扫描 `engine.py`、`report.py` 中的 `\b\d{2,}\b` |
-| R5 | 改计分逻辑前先写/改 `tests/` 用例；`verify` 未通过不得提交 | 由 `verify` 兜底（测试必须全绿） |
-| R6 | 只允许标准库；新增第三方依赖必须先修改本节并在提交信息中说明理由、获人工确认 | 扫描非标准库 import 白名单 |
-| R7 | 读写文件必须显式 `encoding="utf-8"`；禁止依赖系统默认编码 | 扫描 `open(` 调用是否带 `encoding=` |
-| R8 | 只有 `app/cli.py` 的 `__main__` 块允许 `sys.exit(...)`；库模块禁止退出进程 | 扫描 `app/` 下非 `cli.py` 文件的 `sys.exit` |
+| 编号 | 规则 | 反例（禁止） | 正例（必须） | 检查方式 |
+| --- | --- | --- | --- | --- |
+| R1 | 计分相关函数必须返回 `ScoreResult`，不得返回 `None`、裸数字或 `dict` | `def score(...): ... return None` | `return ScoreResult(scale_code=..., total=85, ...)` | 扫描 `app/engine.py`、`app/report.py` 中的 `return None` |
+| R2 | 业务错误统一抛 `app.errors.ScoreError`（输入类用 `InputError`），禁止 `ValueError`/`KeyError`/`assert` 做业务校验，禁止 `except Exception: pass` | `raise ValueError("missing answer")` | `raise ScoreError("缺少必填条目：adl_eat")` | 扫描项目源码中的 `raise ValueError`、`raise KeyError`、`except Exception:` |
+| R3 | 所有面向人的文本（CLI 输出、异常 message、报告）必须是简体中文；英文只允许出现在代码标识符与命令名中 | `print("score ok")` | `print("计分完成，总分 85 分")` | 扫描 `print(...)`、`ScoreError(...)`、`InputError(...)` 中的纯英文字面量 |
+| R4 | 量表条目、分值与分级阈值只能写在 `app/scales.py`；`engine.py`、`report.py` 不得出现两位以上的数字常量 | `if total >= 60:` | `level = pick_level(scale.levels, total)` | 扫描 `engine.py`、`report.py` 中的 `\b\d{2,}\b` |
+| R5 | 改计分逻辑前先写/改 `tests/` 用例；`verify` 未通过不得提交 | 先改 `engine.py` 再补测试 | 先加 `test_engine.py` 用例，再改实现 | 由 `verify` 兜底（测试必须全绿） |
+| R6 | 只允许标准库；新增第三方依赖必须先修改本节并在提交信息中说明理由、获人工确认 | `import requests` | `import json` | 扫描非标准库 import 白名单 |
+| R7 | 读写文件必须显式 `encoding="utf-8"`；禁止依赖系统默认编码 | `open(path)` | `open(path, encoding="utf-8")` | 扫描 `open(` 调用是否带 `encoding=` |
+| R8 | 只有 `app/cli.py` 的 `__main__` 块允许 `sys.exit(...)`；库模块禁止退出进程 | `sys.exit(1)` 写在 `engine.py` | `if __name__ == "__main__": raise SystemExit(main())` | 扫描 `app/` 下非 `cli.py` 文件的 `sys.exit` |
 
 违规处理：`rule-check` 报红 → 立即修代码，不许"先提交再说"，也不许改检查脚本放行（改检查脚本本身需要人工确认）。
 
@@ -157,6 +157,8 @@ python -m app.cli rule-check
 6. 禁止删除或注释掉既有测试来让 `verify` 变绿。
 7. 禁止在源码里使用 `print` 调试后遗留（CLI 层按契约输出，其他层用异常传错）。
 8. 禁止把 `AGENT.md`、`项目构想总需求.md` 的描述改成与代码不符的"已完成"。
+9. 禁止在 Windows 上写 `bash`/`sh` 命令示例（本仓库统一 PowerShell 形式）。
+10. 禁止一次提交混合多个不相关改动（一次提交只做一件事）。
 
 ---
 
@@ -172,6 +174,7 @@ python -m app.cli rule-check
 | 代答场景 | 家属代答会影响结果效度 | 一期先不做代答登记；接入时必须记录提供者并在报告标注 |
 | Python 版本 | 用 3.13 的新语法在 3.12 上直接语法错误 | 只用 3.12 可用语法；`match` 可用，PEP 695 不可用 |
 | 中英文混排 | 单位、量表名混排导致对齐错乱 | 数字与中文之间留空格；量表名首次出现写全称+简称 |
+| PowerShell 写文件带 BOM | `Set-Content -Encoding UTF8` 会写入 BOM，`ast.parse` 直接报 `invalid non-printable character U+FEFF`，表现为"代码看着没问题却跑不起来" | 用编辑器或 `Path.write_text(text, encoding="utf-8")` 落盘；改完立刻跑 `rule-check`，BOM 会在第一步暴露 |
 
 ---
 
@@ -202,10 +205,40 @@ python -m app.cli rule-check
 
 ---
 
-## 11. 维护规则
+## 11. 给 AI 的标准提示词模板（可直接复制）
 
+```text
+你是本仓库的编码助手。开始前请先阅读仓库根目录 AGENT.md，并严格遵守其中的硬性规则（第 6 节）
+与禁止清单（第 7 节）。
+
+任务：<一句话说明要做什么>
+范围：只改 app/ 与 tests/ 下的相关文件，不改其他模块。
+约束：
+1) 不得引入第三方依赖；只改标准库用法。
+2) 计分函数必须返回 ScoreResult；错误一律 raise ScoreError("中文原因")。
+3) 阈值只能写在 app/scales.py，禁止写进 engine.py / report.py。
+4) 先补 tests/ 用例，再改实现。
+完成标准：python -m app.cli verify 退出码为 0，并把关键输出贴给我。
+如果我的要求与 AGENT.md 冲突，请先指出冲突点，不要默默照做。
+```
+
+---
+
+## 12. 维护规则
 
 - 修改代码导致"结构、命令、规则、范围"任一变化时，**同一次提交内**更新本文件。
 - 新增一条硬性规则时，必须同时给出：规则、反例、正例、检查方式（否则视为不可执行，不予采纳）。
 - 本文件的"当前实现范围"表是防止 AI 幻觉的关键，任何功能上线/下线都要改这张表。
 - 本文件与代码冲突时，以代码 + 测试为准，并在当次提交中修正本文件。
+
+---
+
+## 13. 修订记录
+
+| 版本 | 触发事件 | 改了什么 | 效果 |
+| --- | --- | --- | --- |
+| v0.1.0 | 首次撰写 | 建立技术栈版本表、仓库结构、启动/验证命令、硬性规则 R1～R8、禁止清单 | 首次让"规则"可被检查 |
+| v0.2.0 | AI 编码实验：首版代码同时违反 R1、R2、R3、R4 | 第 6 节每条规则补"反例（禁止）/正例（必须）"两列；新增第 11 节提示词模板；第 7 节禁止清单补第 10 条；第 8 节补 PowerShell BOM 坑 | 规则从"断言"变成"可对照的写法"，第二次生成未再犯同类错误 |
+| v0.2.1 | 自检器漏检 `"..." + 变量` 形式的英文提示 | R3 检查改为遍历参数子树，覆盖字符串拼接 | 规则与检查器一致，8 条规则全部可自动判定 |
+
+修订原则：任何一次违规，不能只改代码，必须回答"AGENT.md 里缺了什么"，并在同一次提交内补上。
