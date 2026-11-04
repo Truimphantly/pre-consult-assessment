@@ -28,8 +28,9 @@
 | ADL（Barthel 指数，10 项 0～100 分）题库与分级 | 已实现 | `app/scales.py` |
 | 通用计分引擎（校验、求和、分级） | 已实现 | `app/engine.py` |
 | 中文报告片段生成 | 已实现 | `app/report.py` |
-| 命令行入口（self-check / score / report / verify / list-scales） | 已实现 | `app/cli.py` |
-| 规则自检（把硬性规则变成可执行检查） | 已实现 | `app/selfcheck.py` |
+| 命令行入口（self-check / score / report / health / verify / list-scales / rule-check） | 已实现 | `app/cli.py` |
+| 规则自检（把硬性规则变成可执行检查 R1～R9） | 已实现 | `app/selfcheck.py` |
+| 健康检查（版本 + 量表 + 规则扫描结论，支持 `--json`） | 已实现 | `app/health.py` |
 | Braden、NRS2002、FRAIL、MMSE 等其余 20 张量表 | **未实现**，不要假装已存在 | — |
 | 语音/对话采集、数据库、Web 接口、前端 | **未实现** | — |
 
@@ -126,6 +127,7 @@ python -m app.cli rule-check
 - 新增/修改计分逻辑必须新增对应测试用例；只改实现不补测试视为未完成。
 - 报告类改动必须跑 `tests/test_report.py`，确认禁用词检查仍通过。
 - 接口类改动（新增/改名/删除子命令、改输出字段）必须三同步：`app/cli.py` 的 `COMMANDS`、`docs/命令接口约定.md`、`README.md`（R9）。
+- 机器模式输出必须纯净：`python -m app.cli <命令> --json` 的 stdout 能被 `json.loads` 直接解析，人类提示只能出现在文本模式（R9 输出契约）。
 
 ---
 
@@ -143,7 +145,7 @@ python -m app.cli rule-check
 | R6 | 只允许标准库；新增第三方依赖必须先修改本节并在提交信息中说明理由、获人工确认 | `import requests` | `import json` | 扫描非标准库 import 白名单 |
 | R7 | 读写文件必须显式 `encoding="utf-8"`；禁止依赖系统默认编码 | `open(path)` | `open(path, encoding="utf-8")` | 扫描 `open(` 调用是否带 `encoding=` |
 | R8 | 只有 `app/cli.py` 的 `__main__` 块允许 `sys.exit(...)`；库模块禁止退出进程 | `sys.exit(1)` 写在 `engine.py` | `if __name__ == "__main__": raise SystemExit(main())` | 扫描 `app/` 下非 `cli.py` 文件的 `sys.exit` |
-| R9 | 接口三同步：`app/cli.py` 的 `COMMANDS` 中每个子命令，必须同时出现在 `docs/命令接口约定.md` 与 `README.md` 的命令清单里；加命令、改命令名、删命令时，三处必须在同一次提交内一致 | 只加 `COMMANDS["health"]` 与分发逻辑，不写文档 | 同步补 `docs/命令接口约定.md` 命令表与 `README.md` 命令表 | 解析 `COMMANDS` 的键，逐个在两份文档中匹配 `python -m app.cli <命令>` |
+| R9 | 接口三同步：`app/cli.py` 的 `COMMANDS` 中每个子命令，必须同时出现在 `docs/命令接口约定.md` 与 `README.md` 的命令清单里；加命令、改命令名、删命令时，三处必须在同一次提交内一致；输出格式也属于接口——机器模式（`--json`）的 stdout 必须能被直接解析 | 只加 `COMMANDS["health"]` 与分发逻辑，不写文档；或在 `--json` 分支后再 `print("检查结论：通过")` | 同步补 `docs/命令接口约定.md` 命令表与 `README.md` 命令表；JSON 分支只输出 JSON | 解析 `COMMANDS` 的键，逐个在两份文档中匹配 `python -m app.cli <命令>`；JSON 纯净性由 `tests/` 的 `json.loads` 用例兜底 |
 
 违规处理：`rule-check` 报红 → 立即修代码，不许"先提交再说"，也不许改检查脚本放行（改检查脚本本身需要人工确认）。
 
@@ -220,6 +222,8 @@ python -m app.cli rule-check
 2) 计分函数必须返回 ScoreResult；错误一律 raise ScoreError("中文原因")。
 3) 阈值只能写在 app/scales.py，禁止写进 engine.py / report.py。
 4) 先补 tests/ 用例，再改实现。
+5) 动 CLI 时三同步：COMMANDS、docs/命令接口约定.md、README.md 命令表必须一起改（R9）。
+6) 机器模式（--json）的 stdout 只能有可解析的 JSON，禁止混入提示语或统计行。
 完成标准：python -m app.cli verify 退出码为 0，并把关键输出贴给我。
 如果我的要求与 AGENT.md 冲突，请先指出冲突点，不要默默照做。
 ```
@@ -243,5 +247,6 @@ python -m app.cli rule-check
 | v0.2.0 | AI 编码实验：首版代码同时违反 R1、R2、R3、R4 | 第 6 节每条规则补"反例（禁止）/正例（必须）"两列；新增第 11 节提示词模板；第 7 节禁止清单补第 10 条；第 8 节补 PowerShell BOM 坑 | 规则从"断言"变成"可对照的写法"，第二次生成未再犯同类错误 |
 | v0.2.1 | 自检器漏检 `"..." + 变量` 形式的英文提示 | R3 检查改为遍历参数子树，覆盖字符串拼接 | 规则与检查器一致，8 条规则全部可自动判定 |
 | v0.3.0 | 第二轮 AI 编码实验前：上一轮出现"代码改了、文档没改"的苗头 | 新增 R9 接口三同步；`app/cli.py` 引入 `COMMANDS` 登记表；`selfcheck` 增加第 9 条可执行检查；README 与命令契约补齐全部子命令 | 文档漂移从"只能靠人提醒"变成"verify 直接拦下" |
+| v0.3.1 | 第二轮实验：health 首版同时违反 R3、R9，且 `--json` 混入提示行导致输出不可解析 | R9 扩展为"命令清单 + 输出契约"，明确机器模式必须能被直接解析；第 5 节判定标准补一条；第 11 节提示词模板补第 5、6 条（三同步、JSON 纯净）；第 1 节实现范围登记 health | 下一轮同类违规在提示词阶段即可规避，`--json` 纯净性由 `json.loads` 用例守住 |
 
 修订原则：任何一次违规，不能只改代码，必须回答"AGENT.md 里缺了什么"，并在同一次提交内补上。
