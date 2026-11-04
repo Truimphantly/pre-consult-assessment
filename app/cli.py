@@ -22,6 +22,16 @@ from app.selfcheck import format_report, run_all
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# 子命令登记表：help 文本集中在此，rules 检查 R9 会核对它与两份文档是否一致
+COMMANDS: dict[str, str] = {
+    "self-check": "冒烟检查：版本、量表、命令",
+    "list-scales": "列出已实现量表",
+    "rule-check": "扫描硬性规则 R1～R9",
+    "score": "计分并输出 JSON",
+    "report": "计分并输出中文报告",
+    "verify": "一键验收：规则扫描 + 单元测试",
+}
+
 
 def main(argv: list[str] | None = None) -> int:
     """命令行主入口
@@ -43,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """构建参数解析器"""
+    """构建参数解析器（子命令清单取自 COMMANDS，供 R9 自动核对）"""
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
         description="老年人预问诊量表评估系统 · 命令行入口",
@@ -51,16 +61,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"量表评估系统 {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("self-check", help="冒烟检查：版本、量表、命令")
-    subparsers.add_parser("list-scales", help="列出已实现量表")
-    subparsers.add_parser("rule-check", help="扫描硬性规则 R1～R8")
-    subparsers.add_parser("verify", help="一键验收：规则扫描 + 单元测试")
-
-    for name, help_text in (("score", "计分并输出 JSON"), ("report", "计分并输出中文报告")):
+    for name, help_text in COMMANDS.items():
         sub = subparsers.add_parser(name, help=help_text)
-        sub.add_argument("--scale", default="adl", help="量表编码，默认 adl")
-        sub.add_argument("--answers", default="", help="答案 JSON 文件路径")
-        sub.add_argument("--demo", action="store_true", help="使用内置演示数据")
+        if name in ("score", "report"):
+            sub.add_argument("--scale", default="adl", help="量表编码，默认 adl")
+            sub.add_argument("--answers", default="", help="答案 JSON 文件路径")
+            sub.add_argument("--demo", action="store_true", help="使用内置演示数据")
     return parser
 
 
@@ -83,7 +89,7 @@ def _self_check() -> int:
     """冒烟检查：不依赖外部文件与参数"""
     print(f"量表评估系统 {__version__}")
     print(f"已实现量表：{len(SCALE_REGISTRY)} 张（{'、'.join(sorted(SCALE_REGISTRY))}）")
-    print("可用命令：self-check、list-scales、rule-check、score、report、verify")
+    print(f"可用命令：{'、'.join(COMMANDS)}")
     print("下一步：python -m app.cli report --scale adl --demo")
     return 0
 

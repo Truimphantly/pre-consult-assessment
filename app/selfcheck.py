@@ -26,6 +26,7 @@ RULE_TITLES = {
     "R6": "零第三方依赖",
     "R7": "显式 UTF-8",
     "R8": "退出码归属",
+    "R9": "接口三同步",
 }
 
 
@@ -178,6 +179,25 @@ def check_r8() -> RuleResult:
     return _result("R8", hits, "库模块不退出进程", "库模块中退出进程")
 
 
+def check_r9() -> RuleResult:
+    """R9：接口三同步——每个 CLI 子命令必须写进命令契约与 README"""
+    hits: list[str] = []
+    cli_text = _read(APP_DIR / "cli.py")
+    match = re.search(r"COMMANDS\s*[:=][^=]*=\s*\{(.*?)\}", cli_text, re.S)
+    if match is None:
+        return RuleResult("R9", RULE_TITLES["R9"], False, "未找到 COMMANDS 登记表，无法核对子命令清单")
+    names = re.findall(r'"([a-z][a-z\-]*)"\s*:', match.group(1))
+    docs_text = _read(ROOT / "docs" / "命令接口约定.md")
+    readme_text = _read(ROOT / "README.md")
+    for name in names:
+        token = f"python -m app.cli {name}"
+        if token not in docs_text:
+            hits.append(f"{name} 未写入 docs/命令接口约定.md")
+        if token not in readme_text:
+            hits.append(f"{name} 未写入 README.md")
+    return _result("R9", hits, "命令清单与两份文档一致", "接口未三同步")
+
+
 def run_all() -> list[RuleResult]:
     """依次执行全部规则检查"""
     return [
@@ -189,6 +209,7 @@ def run_all() -> list[RuleResult]:
         check_r6(),
         check_r7(),
         check_r8(),
+        check_r9(),
     ]
 
 

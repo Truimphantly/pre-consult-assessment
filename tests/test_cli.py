@@ -43,7 +43,7 @@ class TestSmokeCommands(unittest.TestCase):
     def test_rule_check_passes(self):
         result = run_cli("rule-check")
         self.assertEqual(result.code, 0, result.out)
-        self.assertIn("规则扫描：8/8 通过", result.out)
+        self.assertIn("规则扫描：9/9 通过", result.out)
 
 
 class TestScoreAndReport(unittest.TestCase):

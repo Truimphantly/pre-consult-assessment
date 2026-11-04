@@ -125,6 +125,7 @@ python -m app.cli rule-check
 - `verify` 输出最后一行必须是 `验收结果：通过`，退出码 0；任何 `失败` 都不得提交。
 - 新增/修改计分逻辑必须新增对应测试用例；只改实现不补测试视为未完成。
 - 报告类改动必须跑 `tests/test_report.py`，确认禁用词检查仍通过。
+- 接口类改动（新增/改名/删除子命令、改输出字段）必须三同步：`app/cli.py` 的 `COMMANDS`、`docs/命令接口约定.md`、`README.md`（R9）。
 
 ---
 
@@ -142,6 +143,7 @@ python -m app.cli rule-check
 | R6 | 只允许标准库；新增第三方依赖必须先修改本节并在提交信息中说明理由、获人工确认 | `import requests` | `import json` | 扫描非标准库 import 白名单 |
 | R7 | 读写文件必须显式 `encoding="utf-8"`；禁止依赖系统默认编码 | `open(path)` | `open(path, encoding="utf-8")` | 扫描 `open(` 调用是否带 `encoding=` |
 | R8 | 只有 `app/cli.py` 的 `__main__` 块允许 `sys.exit(...)`；库模块禁止退出进程 | `sys.exit(1)` 写在 `engine.py` | `if __name__ == "__main__": raise SystemExit(main())` | 扫描 `app/` 下非 `cli.py` 文件的 `sys.exit` |
+| R9 | 接口三同步：`app/cli.py` 的 `COMMANDS` 中每个子命令，必须同时出现在 `docs/命令接口约定.md` 与 `README.md` 的命令清单里；加命令、改命令名、删命令时，三处必须在同一次提交内一致 | 只加 `COMMANDS["health"]` 与分发逻辑，不写文档 | 同步补 `docs/命令接口约定.md` 命令表与 `README.md` 命令表 | 解析 `COMMANDS` 的键，逐个在两份文档中匹配 `python -m app.cli <命令>` |
 
 违规处理：`rule-check` 报红 → 立即修代码，不许"先提交再说"，也不许改检查脚本放行（改检查脚本本身需要人工确认）。
 
@@ -240,5 +242,6 @@ python -m app.cli rule-check
 | v0.1.0 | 首次撰写 | 建立技术栈版本表、仓库结构、启动/验证命令、硬性规则 R1～R8、禁止清单 | 首次让"规则"可被检查 |
 | v0.2.0 | AI 编码实验：首版代码同时违反 R1、R2、R3、R4 | 第 6 节每条规则补"反例（禁止）/正例（必须）"两列；新增第 11 节提示词模板；第 7 节禁止清单补第 10 条；第 8 节补 PowerShell BOM 坑 | 规则从"断言"变成"可对照的写法"，第二次生成未再犯同类错误 |
 | v0.2.1 | 自检器漏检 `"..." + 变量` 形式的英文提示 | R3 检查改为遍历参数子树，覆盖字符串拼接 | 规则与检查器一致，8 条规则全部可自动判定 |
+| v0.3.0 | 第二轮 AI 编码实验前：上一轮出现"代码改了、文档没改"的苗头 | 新增 R9 接口三同步；`app/cli.py` 引入 `COMMANDS` 登记表；`selfcheck` 增加第 9 条可执行检查；README 与命令契约补齐全部子命令 | 文档漂移从"只能靠人提醒"变成"verify 直接拦下" |
 
 修订原则：任何一次违规，不能只改代码，必须回答"AGENT.md 里缺了什么"，并在同一次提交内补上。

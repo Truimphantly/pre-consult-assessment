@@ -17,4 +17,17 @@ python -m app.cli report --scale adl --demo  # ADL 演示计分 + 中文报告
 python -m app.cli verify                     # 一键验收：规则扫描 + 单元测试
 ```
 
+## 命令清单
+
+R9（接口三同步）要求本表与 `app/cli.py` 的 `COMMANDS`、`docs/命令接口约定.md` 三处一致。
+
+| 命令 | 作用 |
+| --- | --- |
+| `python -m app.cli self-check` | 冒烟检查：版本、量表、可用命令 |
+| `python -m app.cli list-scales` | 列出已实现量表与分级 |
+| `python -m app.cli rule-check` | 扫描硬性规则 R1～R9 |
+| `python -m app.cli score --scale adl --demo` | 计分并输出 JSON |
+| `python -m app.cli report --scale adl --demo` | 输出中文报告片段 |
+| `python -m app.cli verify` | 一键验收：规则扫描 + 单元测试 |
+
 要求：Python 3.12，无第三方依赖。
