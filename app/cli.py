@@ -15,6 +15,7 @@ from pathlib import Path
 from app import __version__
 from app.engine import load_answers, score
 from app.errors import InputError, ScoreError
+from app.health import collect, render_text, to_payload
 from app.models import Answer, ScoreResult
 from app.report import render_report
 from app.scales import DEMO_ANSWERS, SCALE_REGISTRY, get_scale
@@ -29,6 +30,7 @@ COMMANDS: dict[str, str] = {
     "rule-check": "扫描硬性规则 R1～R9",
     "score": "计分并输出 JSON",
     "report": "计分并输出中文报告",
+    "health": "健康检查：版本、量表、规则扫描结果",
     "verify": "一键验收：规则扫描 + 单元测试",
 }
 
@@ -67,6 +69,8 @@ def _build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--scale", default="adl", help="量表编码，默认 adl")
             sub.add_argument("--answers", default="", help="答案 JSON 文件路径")
             sub.add_argument("--demo", action="store_true", help="使用内置演示数据")
+        if name == "health":
+            sub.add_argument("--json", action="store_true", help="以 JSON 输出")
     return parser
 
 
@@ -78,6 +82,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         return _list_scales()
     if args.command == "rule-check":
         return _rule_check()
+    if args.command == "health":
+        return _health(args.json)
     if args.command == "verify":
         return _verify()
     if args.command in ("score", "report"):
@@ -110,6 +116,19 @@ def _rule_check() -> int:
     results = run_all()
     print(format_report(results))
     return 0 if all(item.ok for item in results) else 1
+
+
+def _health(use_json: bool) -> int:
+    """健康检查：汇总版本、量表与规则扫描结果
+
+    文本模式输出中文摘要；--json 模式只输出可解析的 JSON，不混入任何提示行。
+    """
+    report = collect()
+    if use_json:
+        print(json.dumps(to_payload(report), ensure_ascii=False, indent=2))
+    else:
+        print(render_text(report))
+    return 0 if report.ok else 1
 
 
 def _verify() -> int:

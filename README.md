@@ -28,6 +28,7 @@ R9（接口三同步）要求本表与 `app/cli.py` 的 `COMMANDS`、`docs/命�
 | `python -m app.cli rule-check` | 扫描硬性规则 R1～R9 |
 | `python -m app.cli score --scale adl --demo` | 计分并输出 JSON |
 | `python -m app.cli report --scale adl --demo` | 输出中文报告片段 |
+| `python -m app.cli health` | 健康检查：版本、量表、规则扫描结论（`--json` 输出 JSON） |
 | `python -m app.cli verify` | 一键验收：规则扫描 + 单元测试 |
 
 要求：Python 3.12，无第三方依赖。
