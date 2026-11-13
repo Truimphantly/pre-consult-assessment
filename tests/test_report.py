@@ -13,7 +13,7 @@ FORBIDDEN_PHRASES = ("确诊", "诊断为", "停药", "调整用药")
 
 def demo_result():
     """用演示数据生成计分结果"""
-    answers = [Answer(item_code=item, option_code=option) for item, option in DEMO_ANSWERS.items()]
+    answers = [Answer(item_code=item, option_code=option) for item, option in DEMO_ANSWERS["adl"].items()]
     return score("adl", answers)
 
 

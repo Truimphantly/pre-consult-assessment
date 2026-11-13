@@ -185,12 +185,13 @@ def _load_answers(scale_code: str, answers_path: str, use_demo: bool) -> list[An
     scale = get_scale(scale_code)
     if scale.code not in _demo_scales():
         raise InputError(f"量表 {scale_code} 暂无内置演示数据，请使用 --answers 指定答案文件")
-    return [Answer(item_code=item, option_code=option) for item, option in DEMO_ANSWERS.items()]
+    demo = DEMO_ANSWERS[scale.code]
+    return [Answer(item_code=item, option_code=option) for item, option in demo.items()]
 
 
 def _demo_scales() -> set[str]:
     """内置演示数据覆盖的量表编码"""
-    return {"adl"}
+    return set(DEMO_ANSWERS)
 
 
 def _to_payload(result: ScoreResult) -> dict:
