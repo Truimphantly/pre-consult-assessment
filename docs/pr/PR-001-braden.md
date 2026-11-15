@@ -56,4 +56,4 @@ python -m app.cli report --scale braden --demo  # 中文报告片段
 - [x] 阈值只写在 `app/scales.py`
 - [x] 新增用例覆盖分级边界与缺项
 - [x] `python -m app.cli verify` 通过
-- [ ] 文档同步（待评审确认后补）
+- [x] 文档同步（`AGENT.md`、`项目构想总需求.md`、`README.md` 已在评审后补齐）
