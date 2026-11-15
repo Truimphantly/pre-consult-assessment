@@ -36,7 +36,7 @@ class TestScoreBasics(unittest.TestCase):
         self.assertEqual(result.level_label, "自理")
 
     def test_demo_data_scores_85(self):
-        result = score("adl", make_answers(DEMO_ANSWERS))
+        result = score("adl", make_answers(DEMO_ANSWERS["adl"]))
         self.assertEqual(result.total, 85)
         self.assertEqual(result.level_label, "轻度依赖")
         self.assertIn("3 个月后复评", result.advice)

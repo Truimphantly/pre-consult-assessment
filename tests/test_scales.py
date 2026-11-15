@@ -15,7 +15,7 @@ class TestScaleRegistry(unittest.TestCase):
 
     def test_get_scale_unknown_raises(self):
         with self.assertRaises(ScoreError) as ctx:
-            get_scale("braden")
+            get_scale("nrs2002")
         self.assertIn("未注册的量表", str(ctx.exception))
 
     def test_adl_item_count(self):
