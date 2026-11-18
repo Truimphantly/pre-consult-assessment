@@ -93,9 +93,12 @@ def _dispatch(args: argparse.Namespace) -> int:
 
 def _self_check() -> int:
     """冒烟检查：不依赖外部文件与参数"""
+    version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     print(f"量表评估系统 {__version__}")
+    print(f"运行环境：Python {version}")
     print(f"已实现量表：{len(SCALE_REGISTRY)} 张（{'、'.join(sorted(SCALE_REGISTRY))}）")
     print(f"可用命令：{'、'.join(COMMANDS)}")
+    print(f"演示数据：{len(DEMO_ANSWERS)} 张量表可直接试用")
     print("下一步：python -m app.cli report --scale adl --demo")
     return 0
 
@@ -108,6 +111,8 @@ def _list_scales() -> int:
         print(f"  条目数：{len(scale.items)}，分值区间：{scale.min_total}～{scale.max_total} 分")
         levels = "，".join(f"{level.label}（{level.min_score}～{level.max_score}）" for level in scale.levels)
         print(f"  分级：{levels}")
+        has_demo = "有，可加 --demo 试用" if scale.code in _demo_scales() else "无，需用 --answers 提供答案文件"
+        print(f"  演示数据：{has_demo}")
     return 0
 
 
