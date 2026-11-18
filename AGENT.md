@@ -65,7 +65,10 @@ pre-consult-assessment/
 ├─ .gitignore                   # 忽略 __pycache__、*.pyc、.venv、本地答案文件
 ├─ docs/
 │  ├─ 命令接口约定.md            # ★ 前后端/人机接口契约：命令、参数、输出、退出码
-│  └─ 实验记录.md                # AI 编码实验的步骤、命令与输出留档
+│  ├─ 实验记录.md                # AI 编码实验的步骤、命令与输出留档
+│  └─ pr/                       # 单次 PR 的描述与评审留档
+│     ├─ PR-001-braden.md       # PR #1：Braden 量表
+│     └─ PR-001-review.md       # PR #1：两轮评审记录
 ├─ app/                         # 源码（import 前缀 app.*）
 │  ├─ __init__.py               # 版本号 __version__
 │  ├─ errors.py                 # 统一异常：ScoreError / InputError
@@ -73,12 +76,17 @@ pre-consult-assessment/
 │  ├─ scales.py                 # ★ 量表题库与分级阈值（唯一允许出现阈值的地方）
 │  ├─ engine.py                 # 计分引擎（只做流程与校验，不写阈值）
 │  ├─ report.py                 # 中文报告片段（只做文案，不写阈值）
+│  ├─ health.py                 # 健康检查：版本 + 量表 + 规则扫描结论（支持 --json）
 │  ├─ selfcheck.py              # 硬性规则扫描器
 │  └─ cli.py                    # 命令行入口（唯一允许 sys.exit 的地方）
 └─ tests/                       # 单元测试（标准库 unittest）
+   ├─ __init__.py               # 使 tests 可被 unittest discover 以仓库根为顶层导入
+   ├─ fixtures/                 # 测试输入文件
+   │  └─ scale_mismatch.json    # 量表编码与 --scale 不一致的用例数据
    ├─ test_scales.py            # 题库一致性：条目数、分值区间、选项唯一
    ├─ test_engine.py            # 计分与校验：满分/分级/缺失/重复/未知编码
    ├─ test_braden.py            # Braden：题库结构、5 档边界、缺项、报告
+   ├─ test_health.py            # 健康检查：模型、中文输出、退出码、JSON 契约
    ├─ test_report.py            # 报告：必备字段、合规措辞、禁用词
    └─ test_cli.py               # CLI：退出码、输出、verify 汇总
 ```
@@ -181,6 +189,7 @@ python -m app.cli rule-check
 | Python 版本 | 用 3.13 的新语法在 3.12 上直接语法错误 | 只用 3.12 可用语法；`match` 可用，PEP 695 不可用 |
 | 中英文混排 | 单位、量表名混排导致对齐错乱 | 数字与中文之间留空格；量表名首次出现写全称+简称 |
 | PowerShell 写文件带 BOM | `Set-Content -Encoding UTF8` 会写入 BOM，`ast.parse` 直接报 `invalid non-printable character U+FEFF`，表现为"代码看着没问题却跑不起来" | 用编辑器或 `Path.write_text(text, encoding="utf-8")` 落盘；改完立刻跑 `rule-check`，BOM 会在第一步暴露 |
+| 文档示例输出漂移 | R9 只核对"命令名是否写进两份文档"，查不出示例里的行数、字段值过期：`health` 曾多写一行 `检查结论：通过`、量表数停在"1 张（adl）"，`verify` 示例停在"运行 12 项" | 改输出格式时把示例整段替换为真实运行结果；每次动 CLI 后跑一次 `python -m app.cli <命令>` 与文档示例逐行对照，行数也算契约 |
 
 ---
 
@@ -192,6 +201,7 @@ python -m app.cli rule-check
 | 计分结果结构（下游依赖的字段） | `app/models.py` 的 `ScoreResult` | 增删字段属于破坏性变更，需同步 `docs/命令接口约定.md` 与测试 |
 | 量表题库结构 | `app/scales.py` 的 `SCALE_REGISTRY` | 新增量表只加数据，不改引擎 |
 | 异常契约 | `app/errors.py` | `ScoreError` 表示业务/输入错误，CLI 统一映射为退出码 1 |
+| 健康检查结果结构（运维/CI 依赖的字段） | `app/health.py` 的 `HealthReport` 与 `to_payload()` | 增删字段属于破坏性变更，需同步 `docs/命令接口约定.md` 第 6 节与 `tests/test_health.py` |
 
 任何"新接口"都必须先落到上述文件，不允许只在代码里隐含约定。
 
@@ -251,5 +261,6 @@ python -m app.cli rule-check
 | v0.3.0 | 第二轮 AI 编码实验前：上一轮出现"代码改了、文档没改"的苗头 | 新增 R9 接口三同步；`app/cli.py` 引入 `COMMANDS` 登记表；`selfcheck` 增加第 9 条可执行检查；README 与命令契约补齐全部子命令 | 文档漂移从"只能靠人提醒"变成"verify 直接拦下" |
 | v0.3.1 | 第二轮实验：health 首版同时违反 R3、R9，且 `--json` 混入提示行导致输出不可解析 | R9 扩展为"命令清单 + 输出契约"，明确机器模式必须能被直接解析；第 5 节判定标准补一条；第 11 节提示词模板补第 5、6 条（三同步、JSON 纯净）；第 1 节实现范围登记 health | 下一轮同类违规在提示词阶段即可规避，`--json` 纯净性由 `json.loads` 用例守住 |
 | v0.3.2 | PR #1 评审：新增 Braden 后，第 1 节实现范围、第 3 节测试清单未同步 | 第 1 节登记 Braden（B.16）并从"未实现"清单移除；第 3 节补 `tests/test_braden.py`；新增"分级依据与调整方式"注释要求 | 文档与代码事实一致，量表分级阈值可追溯到标准表号 |
+| v0.3.3 | 通读复核：health 上线后文档漂移未被 R9 拦住 | 第 3 节补齐 `app/health.py`、`tests/test_health.py`、`tests/fixtures/`、`docs/pr/`；第 8 节新增"文档示例输出漂移"坑；第 9 节登记健康检查结果结构；`docs/命令接口约定.md` 修正 health 输出为 6 行（删掉不存在的 `检查结论：通过`）、量表数改为 2 张、`verify` 示例项数改为 `N`、补 `--scale` 缺省与示例节选说明、纠正"无文件读写"的错误断言；`app/__init__.py` 文档字符串同步两张量表 | 文档示例与真实输出逐行一致；R9 查不到的示例漂移有了人工对照动作 |
 
 修订原则：任何一次违规，不能只改代码，必须回答"AGENT.md 里缺了什么"，并在同一次提交内补上。
