@@ -33,12 +33,15 @@ class TestSmokeCommands(unittest.TestCase):
         self.assertEqual(result.code, 0)
         self.assertIn("量表评估系统", result.out)
         self.assertIn("已实现量表", result.out)
+        self.assertIn("运行环境：Python", result.out)
+        self.assertIn("演示数据", result.out)
 
     def test_list_scales(self):
         result = run_cli("list-scales")
         self.assertEqual(result.code, 0)
         self.assertIn("[adl]", result.out)
         self.assertIn("条目数：10", result.out)
+        self.assertIn("可加 --demo 试用", result.out)
 
     def test_rule_check_passes(self):
         result = run_cli("rule-check")
